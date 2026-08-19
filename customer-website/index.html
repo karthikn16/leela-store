@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leela Store - Order Online</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fdfbf7; margin: 0; padding: 0; }
+        nav { background: #1e4d2b; color: white; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .container { display: flex; max-width: 1200px; margin: 20px auto; gap: 20px; padding: 0 5%; flex-wrap: wrap; }
+        
+        .products { flex: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .card { background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 4px solid #1e4d2b; }
+        .card input { width: 60px; padding: 5px; margin-right: 5px; }
+        .card button { background: #1e4d2b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        
+        .cart-sidebar { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 12px; height: fit-content; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .cart-item { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        .checkout-form input, .checkout-form select { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .checkout-btn { width: 100%; background: #d35400; color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        
+        #upi-box { display: none; text-align: center; margin-top: 15px; padding: 15px; background: #eafaf1; border-radius: 8px; border: 1px solid #27ae60; }
+    </style>
+</head>
+<body>
+    <nav>
+        <h2>Leela Store 🛒</h2>
+        <div>📞 087780 08564</div>
+    </nav>
+
+    <div class="container">
+        <div class="products" id="product-grid">
+            <!-- Loaded by JS -->
+        </div>
+
+        <div class="cart-sidebar">
+            <h3>Your Cart 🛍️</h3>
+            <div id="cart-items"></div>
+            <h2 style="text-align: right; color: #1e4d2b;">Total: ₹<span id="cart-total">0</span></h2>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+            
+            <div class="checkout-form">
+                <h3>Delivery Details</h3>
+                <input type="text" id="cust-name" placeholder="Your Name" required>
+                <input type="text" id="cust-phone" placeholder="WhatsApp Number" required>
+                <select id="pay-method" onchange="toggleUPI()">
+                    <option value="Cash on Delivery">Cash on Delivery</option>
+                    <option value="UPI">Pay via UPI</option>
+                </select>
+                
+                <div id="upi-box">
+                    <strong>Scan to Pay</strong><br>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=yourfatherupi@bank&pn=LeelaStore&cu=INR" alt="UPI QR" style="margin: 10px 0;">
+                    <p style="font-size: 12px;">Pay the total amount and we will verify.</p>
+                </div>
+
+                <button class="checkout-btn" onclick="placeOrder()">Place Order via WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cart = [];
+        let grandTotal = 0;
+
+        // Fetch products from our Phase 2 API
+        fetch('http://localhost:5000/api/products')
+            .then(res => res.json())
+            .then(products => {
+                const grid = document.getElementById('product-grid');
+                products.forEach(p => {
+                    grid.innerHTML += `
+                        <div class="card">
+                            <div style="font-size:40px;">${p.emoji}</div>
+                            <h3>${p.name}</h3>
+                            <p>₹${p.price} / ${p.unit}</p>
+                            <input type="number" id="qty-${p.id}" placeholder="Qty" min="0.1" step="${p.unit==='kg'?'0.1':'1'}">
+                            <button onclick='addToCart(${JSON.stringify(p)})'>Add</button>
+                        </div>
+                    `;
+                });
+            });
+
+        function addToCart(p) {
+            const qty = parseFloat(document.getElementById(`qty-${p.id}`).value);
+            if(!qty || qty <= 0) return alert('Enter valid quantity');
+            
+            const existing = cart.find(i => i.id === p.id);
+            if(existing) existing.qty += qty;
+            else cart.push({...p, qty});
+            
+            document.getElementById(`qty-${p.id}`).value = '';
+            renderCart();
+        }
+
+        function renderCart() {
+            const html = cart.map(c => `
+                <div class="cart-item">
+                    <span>${c.name} (${c.qty} ${c.unit})</span>
+                    <strong>₹${c.price * c.qty}</strong>
+                </div>
+            `).join('');
+            document.getElementById('cart-items').innerHTML = html || '<p>Cart is empty</p>';
+            
+            grandTotal = cart.reduce((sum, c) => sum + (c.price * c.qty), 0);
+            document.getElementById('cart-total').innerText = grandTotal;
+        }
+
+        function toggleUPI() {
+            const method = document.getElementById('pay-method').value;
+            document.getElementById('upi-box').style.display = method === 'UPI' ? 'block' : 'none';
+        }
+
+        // Phase 4, 5 & 6 Logic: Checkout, API Save, and WhatsApp Generation
+        function placeOrder() {
+            if(cart.length === 0) return alert('Your cart is empty!');
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const payMethod = document.getElementById('pay-method').value;
+            
+            if(!name || !phone) return alert('Please enter name and phone!');
+
+            // 1. Send Order to Backend (Phase 4)
+            fetch('http://localhost:5000/api/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customerName: name, phone: phone, paymentMethod: payMethod, total: grandTotal, items: cart })
+            })
+            .then(res => res.json())
+            .then(data => {
+                // 2. Generate WhatsApp Notification (Phase 5)
+                let waText = `*New Order for Leela Store* %0A%0A`;
+                waText += `*Name:* ${name}%0A*Phone:* ${phone}%0A*Payment:* ${payMethod}%0A%0A*Items:*%0A`;
+                
+                cart.forEach(c => {
+                    waText += `- ${c.name} (${c.qty} ${c.unit}) = ₹${c.price * c.qty}%0A`;
+                });
+                
+                waText += `%0A*Total Bill: ₹${grandTotal}*`;
+                
+                // Clear cart
+                cart = [];
+                renderCart();
+                document.getElementById('cust-name').value = '';
+                document.getElementById('cust-phone').value = '';
+
+                alert('Order saved! Redirecting to WhatsApp to send to store owner...');
+                
+                // Open WhatsApp
+                window.open(`https://wa.me/918778008564?text=${waText}`, '_blank');
+            });
+        }
+    </script>
+</body>
+</html>
