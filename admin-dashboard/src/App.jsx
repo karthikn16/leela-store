@@ -7,17 +7,17 @@ export default function App() {
 
   useEffect(() => {
     fetchOrders();
-    fetch('http://localhost:5000/api/products').then(res => res.json()).then(data => setProducts(data));
+    fetch('https://leela-store.onrender.com/api/products').then(res => res.json()).then(data => setProducts(data));
   }, []);
 
   const fetchOrders = () => {
-    fetch('http://localhost:5000/api/orders')
+    fetch('https://leela-store.onrender.com/api/orders')
       .then(res => res.json())
       .then(data => setOrders(data));
   };
 
   const updateStatus = (id, status) => {
-    fetch(`http://localhost:5000/api/orders/${id}/status`, {
+    fetch(`https://leela-store.onrender.com/api/orders/${id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })

@@ -26,7 +26,7 @@
 <body>
     <nav>
         <h2>Leela Store 🛒</h2>
-        <div>📞 087780 08564</div>
+        <div>📞 87780 08564</div>
     </nav>
 
     <div class="container">
@@ -66,7 +66,7 @@
         let grandTotal = 0;
 
         // Fetch products from our Phase 2 API
-        fetch('http://localhost:5000/api/products')
+        fetch('https://leela-store.onrender.com/api/products')
             .then(res => res.json())
             .then(products => {
                 const grid = document.getElementById('product-grid');
@@ -123,7 +123,7 @@
             if(!name || !phone) return alert('Please enter name and phone!');
 
             // 1. Send Order to Backend (Phase 4)
-            fetch('http://localhost:5000/api/checkout', {
+            fetch('https://leela-store.onrender.com/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ customerName: name, phone: phone, paymentMethod: payMethod, total: grandTotal, items: cart })
